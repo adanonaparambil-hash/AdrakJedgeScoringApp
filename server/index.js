@@ -206,6 +206,27 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+// Debug endpoint to test Google Sheets connection
+app.get('/api/debug/login-data', async (_req, res) => {
+  try {
+    console.log('Testing login sheet connection...');
+    const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.LOGIN_SHEET_ID, GOOGLE_SHEETS_CONFIG.LOGIN_GID);
+    console.log('Login sheet data:', rows);
+    res.json({
+      success: true,
+      rowCount: rows.length,
+      sampleData: rows.slice(0, 3), // First 3 rows for debugging
+      headers: rows.length > 0 ? Object.keys(rows[0]) : []
+    });
+  } catch (error) {
+    console.error('Debug login data error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Login endpoint: validate against Google Sheets
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body || {};
