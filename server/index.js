@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const { google } = require('googleapis');
 
 const app = express();
 app.use(cors());
@@ -10,15 +9,12 @@ app.use(express.json());
 const GOOGLE_SHEETS_CONFIG = {
   // Evaluation Results Sheet
   EVAL_SHEET_ID: '1e8_bLRJqe6m9vAnc6Jmx6pam1NoJT6nI',
-  EVAL_RANGE: 'Sheet1!A:N', // Adjust range as needed
+  EVAL_GID: '1688314091', // From the URL gid parameter
   
   // Login Credentials Sheet  
   LOGIN_SHEET_ID: '1iKFh699K_TapsbUG539bvUG7rYvNN0eA',
-  LOGIN_RANGE: 'Sheet1!A:C', // Adjust range as needed
+  LOGIN_GID: '1017169916', // From the URL gid parameter
 };
-
-// Initialize Google Sheets API (using public sheets - no auth needed for public sheets)
-const sheets = google.sheets('v4');
 
 // In-memory cache for evaluation data (since we can't write to public Google Sheets without auth)
 let evaluationCache = new Map(); // key: "teamName|judgeName", value: evaluation data
@@ -28,7 +24,7 @@ const CACHE_DURATION = 30000; // 30 seconds
 // Load initial data from Google Sheets into cache
 async function initializeCache() {
   try {
-    const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.EVAL_SHEET_ID, GOOGLE_SHEETS_CONFIG.EVAL_RANGE);
+    const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.EVAL_SHEET_ID, GOOGLE_SHEETS_CONFIG.EVAL_GID);
     evaluationCache.clear();
     
     for (const row of rows) {
@@ -79,16 +75,25 @@ const EVAL_COLUMNS = [
   'How synced the presentation with Logo and Theme Music'
 ];
 
-// Helper function to read Google Sheets data
-async function readGoogleSheet(spreadsheetId, range) {
+// Helper function to read Google Sheets data using CSV export
+async function readGoogleSheet(spreadsheetId, gid) {
   try {
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range,
-      key: process.env.GOOGLE_API_KEY, // Optional: for rate limiting, but public sheets work without it
-    });
+    // Use CSV export URL for public Google Sheets (no API key required)
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
     
-    const rows = response.data.values || [];
+    // Use fetch to get CSV data
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(csvUrl);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const csvText = await response.text();
+    const rows = csvText.split('\n').map(row => 
+      row.split(',').map(cell => cell.replace(/^"|"$/g, '').trim())
+    ).filter(row => row.some(cell => cell.length > 0));
+    
     if (rows.length === 0) return [];
     
     // Convert to JSON format (first row as headers)
@@ -148,7 +153,7 @@ app.post('/api/login', async (req, res) => {
   }
   
   try {
-    const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.LOGIN_SHEET_ID, GOOGLE_SHEETS_CONFIG.LOGIN_RANGE);
+    const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.LOGIN_SHEET_ID, GOOGLE_SHEETS_CONFIG.LOGIN_GID);
     if (!rows || rows.length === 0) {
       return res.status(500).json({ error: 'Login data not available' });
     }
