@@ -15,6 +15,9 @@ dist/
 .env.local
 .env.*.local
 
+# Google Sheets API credentials
+service-account-key.json
+
 # IDE & Editor files
 .vscode/
 .idea/
