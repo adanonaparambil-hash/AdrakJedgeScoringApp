@@ -1,0 +1,14 @@
+# ...existing code...
+/node_modules
+/dist
+/.angular
+/.angular/cache
+/.vs
+.vscode
+.idea
+.DS_Store
+.env
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# ...existing code...
