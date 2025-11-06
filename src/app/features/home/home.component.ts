@@ -14,8 +14,8 @@ import { ApiService } from '../../core/api.service';
       <!-- Welcome Header -->
       <div class="glass welcome-header" style="padding:20px; text-align:center; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));">
         <div style="font-size:28px; margin-bottom:8px;">👋</div>
-        <div style="font-weight:700; font-size:20px; background: linear-gradient(45deg, #3B82F6, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-          Welcome, {{ judgeName }}!
+        <div style="font-weight:700; font-size:20px; background: linear-gradient(45deg, var(--adrak-green), var(--adrak-gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          أهلاً وسهلاً Welcome, {{ judgeName }}!
         </div>
         <div style="font-size:14px; color:var(--muted); margin-top:4px;">
           <i class="fas fa-gavel" style="margin-right:6px;"></i>
@@ -132,8 +132,8 @@ import { ApiService } from '../../core/api.service';
       <!-- Footer -->
       <div class="glass" style="padding:16px; text-align:center; background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));">
         <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;">
-          <i class="fas fa-code" style="color:var(--accent);"></i>
-          <span style="font-weight:600;">Developed by Adrak IT Department</span>
+          <i class="fas fa-code" style="color:var(--adrak-gold);"></i>
+          <span style="font-weight:600;">الأدراك Al Adrak IT Department</span>
         </div>
         <div style="font-size:12px; color:var(--muted);">
           © 2025 • CGT Judge App • Version 1.0

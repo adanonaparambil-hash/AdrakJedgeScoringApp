@@ -12,8 +12,8 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
     <div style="display:flex; flex-direction:column; gap:16px;">
       <!-- Header -->
       <div class="glass" style="padding:16px; text-align:center; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,255,255,0.05));">
-        <div style="font-weight:700; font-size:24px; margin-bottom:8px; background: linear-gradient(45deg, #FFD700, #FFA500); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-          🏆 Leaderboard 🏆
+        <div style="font-weight:700; font-size:24px; margin-bottom:8px; background: linear-gradient(45deg, var(--adrak-gold), var(--adrak-gold-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          🏆 لوحة المتصدرين Leaderboard 🏆
         </div>
         <div style="font-size:12px; color:var(--muted);">Live Rankings • Updates every 3 seconds</div>
       </div>
@@ -23,37 +23,37 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
         <div style="display:flex; align-items:end; justify-content:center; gap:16px; margin-bottom:20px;">
           
           <!-- 2nd Place -->
-          <div class="podium-item" [class.winner-pop]="animate && data[1]?.team === lastWinner" 
+          <div class="podium-item" [class.winner-pop]="animate && data[1].team === lastWinner" 
                style="display:flex; flex-direction:column; align-items:center; transform: translateY(20px);">
             <div style="font-size:32px; margin-bottom:8px;">🥈</div>
             <div class="glass" style="padding:12px; min-width:80px; text-align:center; background: linear-gradient(135deg, rgba(192,192,192,0.2), rgba(255,255,255,0.05));"
-                 [style.borderTop]="'3px solid ' + color(data[1]?.team || '')">
-              <div style="font-weight:600; font-size:14px;">{{ data[1]?.team }}</div>
-              <div style="font-size:12px; color:var(--muted); margin-top:4px;">{{ data[1]?.average | number:'1.0-0' }}/120</div>
+                 [style.borderTop]="'3px solid ' + color(data[1].team || '')">
+              <div style="font-weight:600; font-size:14px;">{{ data[1].team }}</div>
+              <div style="font-size:12px; color:var(--muted); margin-top:4px;">{{ data[1].average | number:'1.0-0' }}/120</div>
             </div>
             <div style="width:60px; height:40px; background: linear-gradient(135deg, #C0C0C0, #A8A8A8); margin-top:8px; border-radius:4px 4px 0 0; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:18px;">2</div>
           </div>
 
           <!-- 1st Place -->
-          <div class="podium-item" [class.winner-pop]="animate && data[0]?.team === lastWinner" 
+          <div class="podium-item" [class.winner-pop]="animate && data[0].team === lastWinner" 
                style="display:flex; flex-direction:column; align-items:center;">
             <div style="font-size:40px; margin-bottom:8px; animation: bounce 2s infinite;">🥇</div>
             <div class="glass" style="padding:16px; min-width:90px; text-align:center; background: linear-gradient(135deg, rgba(255,215,0,0.3), rgba(255,255,255,0.1)); box-shadow: 0 0 20px rgba(255,215,0,0.3);"
-                 [style.borderTop]="'4px solid ' + color(data[0]?.team || '')">
-              <div style="font-weight:700; font-size:16px;">{{ data[0]?.team }}</div>
-              <div style="font-size:14px; color:var(--muted); margin-top:4px; font-weight:600;">{{ data[0]?.average | number:'1.0-0' }}/120</div>
+                 [style.borderTop]="'4px solid ' + color(data[0].team || '')">
+              <div style="font-weight:700; font-size:16px;">{{ data[0].team }}</div>
+              <div style="font-size:14px; color:var(--muted); margin-top:4px; font-weight:600;">{{ data[0].average | number:'1.0-0' }}/120</div>
             </div>
             <div style="width:70px; height:60px; background: linear-gradient(135deg, #FFD700, #FFA500); margin-top:8px; border-radius:4px 4px 0 0; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:24px; box-shadow: 0 4px 15px rgba(255,215,0,0.4);">1</div>
           </div>
 
           <!-- 3rd Place -->
-          <div class="podium-item" [class.winner-pop]="animate && data[2]?.team === lastWinner" 
+          <div class="podium-item" [class.winner-pop]="animate && data[2].team === lastWinner" 
                style="display:flex; flex-direction:column; align-items:center; transform: translateY(40px);">
             <div style="font-size:28px; margin-bottom:8px;">🥉</div>
             <div class="glass" style="padding:10px; min-width:70px; text-align:center; background: linear-gradient(135deg, rgba(205,127,50,0.2), rgba(255,255,255,0.05));"
-                 [style.borderTop]="'3px solid ' + color(data[2]?.team || '')">
-              <div style="font-weight:600; font-size:13px;">{{ data[2]?.team }}</div>
-              <div style="font-size:11px; color:var(--muted); margin-top:4px;">{{ data[2]?.average | number:'1.0-0' }}/120</div>
+                 [style.borderTop]="'3px solid ' + color(data[2].team || '')">
+              <div style="font-weight:600; font-size:13px;">{{ data[2].team }}</div>
+              <div style="font-size:11px; color:var(--muted); margin-top:4px;">{{ data[2].average | number:'1.0-0' }}/120</div>
             </div>
             <div style="width:50px; height:30px; background: linear-gradient(135deg, #CD7F32, #B8860B); margin-top:8px; border-radius:4px 4px 0 0; display:flex; align-items:center; justify-content:center; color:white; font-weight:700; font-size:16px;">3</div>
           </div>

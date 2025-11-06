@@ -17,8 +17,8 @@ import { ApiService } from '../../core/api.service';
         <div class="logo-animation" style="font-size:64px; margin-bottom:16px; animation: logoFloat 3s ease-in-out infinite alternate;">
           🏆
         </div>
-        <div style="font-weight:700; font-size:28px; margin-bottom:8px; background: linear-gradient(45deg, #06b6d4, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-          AlAdrak CGT Judge
+        <div style="font-weight:700; font-size:28px; margin-bottom:8px; background: linear-gradient(45deg, var(--adrak-green), var(--adrak-gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          الأدراك Al Adrak CGT Judge
         </div>
         <div style="font-size:14px; color:var(--muted); display:flex; align-items:center; justify-content:center; gap:6px;">
           <i class="fas fa-gavel"></i>
@@ -68,7 +68,7 @@ import { ApiService } from '../../core/api.service';
         <button type="submit" 
                 [disabled]="form.invalid || loading" 
                 class="login-btn"
-                style="padding:16px; border-radius:12px; border:none; background:linear-gradient(135deg, var(--primary), var(--accent)); color:white; font-weight:700; font-size:16px; cursor:pointer; transition: all 0.3s ease; display:flex; align-items:center; justify-content:center; gap:8px; min-height:56px;">
+                style="padding:16px; border-radius:12px; border:none; background:linear-gradient(135deg, var(--adrak-green), var(--adrak-gold)); color:white; font-weight:700; font-size:16px; cursor:pointer; transition: all 0.3s ease; display:flex; align-items:center; justify-content:center; gap:8px; min-height:56px; box-shadow: 0 4px 15px rgba(45, 90, 61, 0.3);">
           <span *ngIf="loading" class="spinner" style="width:20px; height:20px; border:2px solid rgba(255,255,255,0.3); border-top:2px solid white; border-radius:50%; animation: spin 1s linear infinite;"></span>
           <i *ngIf="!loading" class="fas fa-sign-in-alt"></i>
           {{ loading ? 'Signing in...' : 'Sign In' }}
@@ -85,14 +85,14 @@ import { ApiService } from '../../core/api.service';
       <!-- App Info Footer -->
       <div class="login-footer glass" style="padding:20px; text-align:center; margin-top:24px; max-width:400px; margin-left:auto; margin-right:auto; width:100%; background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));">
         <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;">
-          <i class="fas fa-code" style="color:var(--accent);"></i>
-          <span style="font-weight:600;">Developed by Adrak IT Department</span>
+          <i class="fas fa-code" style="color:var(--adrak-gold);"></i>
+          <span style="font-weight:600;">طُور بواسطة قسم تقنية المعلومات - الأدراك</span>
         </div>
         <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">
-          Proudly presented by AL Adrak IT Team
+          Developed by Al Adrak IT Department
         </div>
         <div style="font-size:10px; color:var(--muted);">
-          © 2025 • Mobile Judging Platform • Version 1.0.0
+          © 2025 الأدراك • Mobile Judging Platform • Version 1.0.0
         </div>
       </div>
     </div>

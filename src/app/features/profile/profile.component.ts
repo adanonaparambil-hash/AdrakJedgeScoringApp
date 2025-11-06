@@ -94,14 +94,14 @@ import { Router } from '@angular/router';
       <!-- App Info -->
       <div class="glass" style="padding:16px; text-align:center; background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));">
         <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:8px;">
-          <i class="fas fa-mobile-alt" style="color:var(--accent);"></i>
-          <span style="font-weight:600;">CGT Judge App</span>
+          <i class="fas fa-mobile-alt" style="color:var(--adrak-gold);"></i>
+          <span style="font-weight:600;">الأدراك CGT Judge App</span>
         </div>
         <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">
-          Mobile Judging Platform
+          منصة التحكيم المحمولة Mobile Judging Platform
         </div>
         <div style="font-size:10px; color:var(--muted);">
-          © 2025 Adrak IT Department • Version 1.0.0
+          © 2025 Al Adrak IT Department • Version 1.0.0
         </div>
       </div>
     </div>

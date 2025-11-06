@@ -38,7 +38,7 @@ const PRESENTATION_KEYS = [
       <!-- Team Selection Header -->
       <div class="glass" style="padding:16px; background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(59, 130, 246, 0.1));">
         <div style="font-weight:700; font-size:20px; margin-bottom:12px; text-align:center; display:flex; align-items:center; justify-content:center; gap:8px;">
-          <i class="fas fa-clipboard-list" style="color:var(--accent);"></i>
+          <i class="fas fa-clipboard-list" style="color:var(--adrak-gold);"></i>
           Team Evaluation
         </div>
         
