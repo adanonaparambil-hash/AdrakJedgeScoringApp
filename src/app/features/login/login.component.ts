@@ -282,13 +282,17 @@ export class LoginComponent {
     this.error = '';
     this.api.login(username, password).subscribe({
       next: (res) => {
+        this.loading = false;
         localStorage.setItem('token', res.token);
         localStorage.setItem('judgeName', res.judgeName);
         this.router.navigateByUrl('/tabs/home');
       },
       error: (err) => {
-        this.error = err?.error?.error || 'Login failed';
         this.loading = false;
+        // Show detailed error message from server
+        const errorMessage = err?.error?.error || err?.message || 'Login failed. Please check your credentials and try again.';
+        this.error = errorMessage;
+        console.error('Login error:', err);
       }
     });
   }

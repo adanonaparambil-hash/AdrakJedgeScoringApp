@@ -25,12 +25,14 @@ const CACHE_DURATION = 30000; // 30 seconds
 // Load initial data from Google Sheets into cache
 async function initializeCache() {
   try {
+    console.log('Loading evaluation data from Google Sheet...');
     const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.EVAL_SHEET_ID, GOOGLE_SHEETS_CONFIG.EVAL_GID);
     evaluationCache.clear();
 
+    let loadedCount = 0;
     for (const row of rows) {
-      const teamName = String(row['Team Name'] || '').trim();
-      const judgeName = String(row['Judge Name'] || '').trim();
+      const teamName = String(row['Team Name'] || row['team name'] || '').trim();
+      const judgeName = String(row['Judge Name'] || row['judge name'] || '').trim();
 
       if (teamName && judgeName) {
         const key = `${teamName}|${judgeName}`;
@@ -38,23 +40,28 @@ async function initializeCache() {
 
         for (const col of EVAL_COLUMNS) {
           if (col === 'Team Name' || col === 'Judge Name') continue;
-          values[col] = Number(row[col]) || 0;
+          // Try both exact match and case-insensitive match
+          const colValue = row[col] || row[col.toLowerCase()] || row[col.toUpperCase()] || 0;
+          values[col] = Number(colValue) || 0;
         }
 
         evaluationCache.set(key, values);
+        loadedCount++;
       }
     }
 
     lastCacheUpdate = Date.now();
-    console.log(`Cache initialized with ${evaluationCache.size} evaluations`);
+    console.log(`Cache initialized with ${loadedCount} evaluations from Google Sheet`);
   } catch (error) {
     console.error('Failed to initialize cache:', error);
+    console.error('Stack:', error.stack);
   }
 }
 
 // Refresh cache if needed
 async function refreshCacheIfNeeded() {
   if (Date.now() - lastCacheUpdate > CACHE_DURATION) {
+    console.log('Refreshing cache from Google Sheet...');
     await initializeCache();
   }
 }
@@ -76,11 +83,64 @@ const EVAL_COLUMNS = [
   'How synced the presentation with Logo and Theme Music'
 ];
 
+// Helper function to properly parse CSV with quoted fields
+function parseCSV(csvText) {
+  const rows = [];
+  let currentRow = [];
+  let currentCell = '';
+  let insideQuotes = false;
+  
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
+    
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        // Escaped quote
+        currentCell += '"';
+        i++; // Skip next quote
+      } else {
+        // Toggle quote state
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === ',' && !insideQuotes) {
+      // End of cell
+      currentRow.push(currentCell.trim());
+      currentCell = '';
+    } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+      // End of row
+      if (char === '\r' && nextChar === '\n') {
+        i++; // Skip \n after \r
+      }
+      currentRow.push(currentCell.trim());
+      if (currentRow.some(cell => cell.length > 0)) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      currentCell = '';
+    } else {
+      currentCell += char;
+    }
+  }
+  
+  // Add last cell and row if any
+  if (currentCell.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentCell.trim());
+    if (currentRow.some(cell => cell.length > 0)) {
+      rows.push(currentRow);
+    }
+  }
+  
+  return rows;
+}
+
 // Helper function to read Google Sheets data using CSV export
 async function readGoogleSheet(spreadsheetId, gid) {
   try {
     // Use CSV export URL for public Google Sheets (no API key required)
     const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
+    
+    console.log(`Reading Google Sheet from: ${csvUrl}`);
 
     // Use fetch to get CSV data
     const fetch = (await import('node-fetch')).default;
@@ -91,25 +151,39 @@ async function readGoogleSheet(spreadsheetId, gid) {
     }
 
     const csvText = await response.text();
-    const rows = csvText.split('\n').map(row =>
-      row.split(',').map(cell => cell.replace(/^"|"$/g, '').trim())
-    ).filter(row => row.some(cell => cell.length > 0));
+    
+    if (!csvText || csvText.trim().length === 0) {
+      console.warn('Empty CSV response from Google Sheet');
+      return [];
+    }
 
-    if (rows.length === 0) return [];
+    // Parse CSV properly handling quoted fields
+    const rows = parseCSV(csvText);
+    
+    if (rows.length === 0) {
+      console.warn('No rows found in CSV');
+      return [];
+    }
 
     // Convert to JSON format (first row as headers)
-    const headers = rows[0];
+    const headers = rows[0].map(h => String(h || '').trim());
     const data = rows.slice(1).map(row => {
       const obj = {};
       headers.forEach((header, index) => {
-        obj[header] = row[index] || '';
+        obj[header] = String(row[index] || '').trim();
       });
       return obj;
     });
 
+    console.log(`Successfully parsed ${data.length} rows from Google Sheet`);
+    if (data.length > 0) {
+      console.log(`Headers found: ${headers.join(', ')}`);
+    }
+    
     return data;
   } catch (error) {
     console.error('Error reading Google Sheet:', error.message);
+    console.error('Stack:', error.stack);
     return [];
   }
 }
@@ -235,25 +309,41 @@ app.post('/api/login', async (req, res) => {
   }
 
   try {
+    console.log('Login attempt for username:', username);
     const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.LOGIN_SHEET_ID, GOOGLE_SHEETS_CONFIG.LOGIN_GID);
+    
     if (!rows || rows.length === 0) {
-      return res.status(500).json({ error: 'Login data not available' });
+      console.error('No login data found in Google Sheet');
+      return res.status(500).json({ error: 'Login data not available. Please check Google Sheet access.' });
     }
 
-    const match = rows.find(r =>
-      String(r.Username || '').trim() === String(username).trim() &&
-      String(r.Password || '').trim() === String(password).trim()
-    );
+    console.log(`Found ${rows.length} login records in sheet`);
+    
+    // Try to find match (case-insensitive for username, case-sensitive for password)
+    const match = rows.find(r => {
+      const sheetUsername = String(r.Username || r.username || '').trim();
+      const sheetPassword = String(r.Password || r.password || '').trim();
+      const inputUsername = String(username).trim();
+      const inputPassword = String(password).trim();
+      
+      return sheetUsername.toLowerCase() === inputUsername.toLowerCase() &&
+             sheetPassword === inputPassword;
+    });
 
     if (!match) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      console.log('Login failed: Invalid credentials');
+      return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    // Use username as judge name for simplicity
-    res.json({ token: `judge:${username}`, judgeName: username });
+    // Use Name column if available, otherwise use username
+    const judgeName = String(match.Name || match.name || username).trim() || username;
+    console.log('Login successful for:', judgeName);
+    
+    res.json({ token: `judge:${username}`, judgeName: judgeName });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: 'Login service unavailable' });
+    console.error('Stack:', error.stack);
+    res.status(500).json({ error: 'Login service unavailable. Please try again later.' });
   }
 });
 
