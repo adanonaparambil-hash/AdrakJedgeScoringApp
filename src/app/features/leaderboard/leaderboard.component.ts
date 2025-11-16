@@ -10,13 +10,33 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
   imports: [CommonModule, HttpClientModule],
   template: `
     <div style="display:flex; flex-direction:column; gap:16px;">
-      <!-- Header -->
-      <div class="glass" style="padding:16px; text-align:center; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,255,255,0.05));">
-        <div style="font-weight:700; font-size:24px; margin-bottom:8px; background: linear-gradient(45deg, var(--adrak-gold), var(--adrak-gold-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-          🏆 لوحة المتصدرين Leaderboard 🏆
+      
+      <!-- Access Denied for Non-Admin -->
+      <div *ngIf="!isAdmin" class="glass" style="padding:24px; text-align:center; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(255, 255, 255, 0.05)); border:2px solid rgba(239, 68, 68, 0.3);">
+        <div style="font-size:48px; margin-bottom:12px;">🔒</div>
+        <div style="font-weight:700; font-size:20px; color:#EF4444; margin-bottom:8px;">
+          Admin Access Required
         </div>
-        <div style="font-size:12px; color:var(--muted);">Live Rankings • Updates every 3 seconds</div>
+        <div style="font-size:14px; color:var(--muted); margin-bottom:16px;">
+          The leaderboard is only visible to administrators.
+        </div>
+        <div style="font-size:12px; color:var(--muted);">
+          You can view your own scores on the Home and Profile pages.
+        </div>
       </div>
+
+      <!-- Admin Leaderboard View -->
+      <ng-container *ngIf="isAdmin">
+        <!-- Header -->
+        <div class="glass" style="padding:16px; text-align:center; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,255,255,0.05));">
+          <div style="font-weight:700; font-size:24px; margin-bottom:8px; background: linear-gradient(45deg, var(--adrak-gold), var(--adrak-gold-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            🏆 لوحة المتصدرين Leaderboard 🏆
+          </div>
+          <div style="font-size:12px; color:var(--muted);">Live Rankings • Updates every 3 seconds</div>
+          <div style="font-size:11px; color:var(--muted); margin-top:4px;">
+            Admin View • Viewing as {{ userName }}
+          </div>
+        </div>
 
       <!-- Podium for top 3 -->
       <div *ngIf="data.length >= 3" class="glass" style="padding:20px; background: linear-gradient(135deg, rgba(255,215,0,0.05), rgba(255,255,255,0.02));">
@@ -93,6 +113,7 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
               </div>
               <div style="font-size:12px; color:var(--muted);">
                 Position {{ i + 1 }}
+                <span *ngIf="row.submittedJudges !== undefined"> • {{ row.submittedJudges }}/{{ row.totalJudges }} submitted</span>
               </div>
             </div>
           </div>
@@ -120,9 +141,10 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
       </div>
 
       <!-- Celebration Animation -->
-      <div *ngIf="animate" style="text-align:center; font-size:32px; animation: celebration 1.2s ease-in-out;">
+      <div *ngIf="animate && isAdmin" style="text-align:center; font-size:32px; animation: celebration 1.2s ease-in-out;">
         🎉 🏆 🎊 🥇 🎉
       </div>
+      </ng-container>
     </div>
 
     <style>
@@ -306,7 +328,9 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   private api = inject(ApiService);
   private destroy$ = new Subject<void>();
 
-  data: Array<{ team: string; average: number }> = [];
+  isAdmin = localStorage.getItem('isAdmin') === 'true';
+  userName = localStorage.getItem('userName') || localStorage.getItem('judgeName') || '';
+  data: Array<{ team: string; average: number; totalJudges?: number; submittedJudges?: number }> = [];
   lastTop = '';
   lastWinner = '';
   animate = false;

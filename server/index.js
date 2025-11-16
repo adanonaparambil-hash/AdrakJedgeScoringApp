@@ -12,9 +12,10 @@ const GOOGLE_SHEETS_CONFIG = {
   EVAL_SHEET_ID: '1e8_bLRJqe6m9vAnc6Jmx6pam1NoJT6nI',
   EVAL_GID: '1688314091', // From the URL gid parameter
 
-  // Login Credentials Sheet  
-  LOGIN_SHEET_ID: '1iKFh699K_TapsbUG539bvUG7rYvNN0eA',
-  LOGIN_GID: '1017169916', // From the URL gid parameter
+  // Users Sheet (Login + Admin + Submitted tracking)
+  USERS_SHEET_ID: '1iKFh699K_TapsbUG539bvUG7rYvNN0eA',
+  USERS_GID: '1017169916', // From the URL gid parameter
+  // Columns: USERID, NAME, SUBMITTED, ISADMIN
 };
 
 // In-memory cache for evaluation data (since we can't write to public Google Sheets without auth)
@@ -89,11 +90,11 @@ function parseCSV(csvText) {
   let currentRow = [];
   let currentCell = '';
   let insideQuotes = false;
-  
+
   for (let i = 0; i < csvText.length; i++) {
     const char = csvText[i];
     const nextChar = csvText[i + 1];
-    
+
     if (char === '"') {
       if (insideQuotes && nextChar === '"') {
         // Escaped quote
@@ -122,7 +123,7 @@ function parseCSV(csvText) {
       currentCell += char;
     }
   }
-  
+
   // Add last cell and row if any
   if (currentCell.length > 0 || currentRow.length > 0) {
     currentRow.push(currentCell.trim());
@@ -130,7 +131,7 @@ function parseCSV(csvText) {
       rows.push(currentRow);
     }
   }
-  
+
   return rows;
 }
 
@@ -139,7 +140,7 @@ async function readGoogleSheet(spreadsheetId, gid) {
   try {
     // Use CSV export URL for public Google Sheets (no API key required)
     const csvUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=csv&gid=${gid}`;
-    
+
     console.log(`Reading Google Sheet from: ${csvUrl}`);
 
     // Use fetch to get CSV data
@@ -151,7 +152,7 @@ async function readGoogleSheet(spreadsheetId, gid) {
     }
 
     const csvText = await response.text();
-    
+
     if (!csvText || csvText.trim().length === 0) {
       console.warn('Empty CSV response from Google Sheet');
       return [];
@@ -159,7 +160,7 @@ async function readGoogleSheet(spreadsheetId, gid) {
 
     // Parse CSV properly handling quoted fields
     const rows = parseCSV(csvText);
-    
+
     if (rows.length === 0) {
       console.warn('No rows found in CSV');
       return [];
@@ -179,7 +180,7 @@ async function readGoogleSheet(spreadsheetId, gid) {
     if (data.length > 0) {
       console.log(`Headers found: ${headers.join(', ')}`);
     }
-    
+
     return data;
   } catch (error) {
     console.error('Error reading Google Sheet:', error.message);
@@ -281,11 +282,11 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Debug endpoint to test Google Sheets connection
-app.get('/api/debug/login-data', async (_req, res) => {
+app.get('/api/debug/users-data', async (_req, res) => {
   try {
-    console.log('Testing login sheet connection...');
-    const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.LOGIN_SHEET_ID, GOOGLE_SHEETS_CONFIG.LOGIN_GID);
-    console.log('Login sheet data:', rows);
+    console.log('Testing users sheet connection...');
+    const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.USERS_SHEET_ID, GOOGLE_SHEETS_CONFIG.USERS_GID);
+    console.log('Users sheet data:', rows);
     res.json({
       success: true,
       rowCount: rows.length,
@@ -293,7 +294,7 @@ app.get('/api/debug/login-data', async (_req, res) => {
       headers: rows.length > 0 ? Object.keys(rows[0]) : []
     });
   } catch (error) {
-    console.error('Debug login data error:', error);
+    console.error('Debug users data error:', error);
     res.status(500).json({
       success: false,
       error: error.message
@@ -301,45 +302,100 @@ app.get('/api/debug/login-data', async (_req, res) => {
   }
 });
 
-// Login endpoint: validate against Google Sheets
+// Submit all evaluations endpoint - saves all scores and marks user as submitted
+app.post('/api/submit-all-evaluations', async (req, res) => {
+  const { userId, userName, evaluations } = req.body || {};
+
+  if (!userId || !userName || !evaluations) {
+    return res.status(400).json({ error: 'userId, userName, and evaluations are required' });
+  }
+
+  try {
+    console.log('Submit all evaluations request for user:', userName);
+    console.log('Number of evaluations:', evaluations.length);
+
+    // Save all evaluations to cache and try to write to Google Sheets
+    let allSaved = true;
+
+    for (const eval of evaluations) {
+      const { teamName, judgeName, values } = eval;
+
+      // Save to cache
+      const key = `${teamName}|${judgeName}`;
+      evaluationCache.set(key, values);
+
+      // Try to write to Google Sheets
+      const writeSuccess = await writeEvaluationToSheet(teamName, judgeName, values);
+      if (!writeSuccess) {
+        allSaved = false;
+      }
+    }
+
+    // Try to update SUBMITTED column to Y
+    // Note: This requires Google Sheets API write access
+    // For now, we'll just log it
+    console.log(`User ${userId} (${userName}) marked as submitted`);
+    console.log(`Scores saved to cache. Google Sheets write: ${allSaved ? 'Success' : 'Failed (using cache only)'}`);
+
+    res.json({
+      ok: true,
+      message: allSaved
+        ? 'All evaluations submitted successfully to Google Sheets!'
+        : 'Evaluations saved to cache. Please manually update SUBMITTED column in Google Sheet.',
+      writtenToSheet: allSaved
+    });
+  } catch (error) {
+    console.error('Submit all evaluations error:', error);
+    res.status(500).json({ error: 'Failed to submit evaluations' });
+  }
+});
+
+// Login endpoint: validate against Google Sheets (username only, no password)
 app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body || {};
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required' });
+  const { username } = req.body || {};
+  if (!username) {
+    return res.status(400).json({ error: 'Username is required' });
   }
 
   try {
     console.log('Login attempt for username:', username);
-    const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.LOGIN_SHEET_ID, GOOGLE_SHEETS_CONFIG.LOGIN_GID);
-    
+    const rows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.USERS_SHEET_ID, GOOGLE_SHEETS_CONFIG.USERS_GID);
+
     if (!rows || rows.length === 0) {
-      console.error('No login data found in Google Sheet');
-      return res.status(500).json({ error: 'Login data not available. Please check Google Sheet access.' });
+      console.error('No user data found in Google Sheet');
+      return res.status(500).json({ error: 'User data not available. Please check Google Sheet access.' });
     }
 
-    console.log(`Found ${rows.length} login records in sheet`);
-    
-    // Try to find match (case-insensitive for username, case-sensitive for password)
+    console.log(`Found ${rows.length} user records in sheet`);
+
+    // Find user by USERID (case-insensitive)
     const match = rows.find(r => {
-      const sheetUsername = String(r.Username || r.username || '').trim();
-      const sheetPassword = String(r.Password || r.password || '').trim();
+      const sheetUserId = String(r.USERID || r.userid || r.UserId || r.userId || '').trim();
       const inputUsername = String(username).trim();
-      const inputPassword = String(password).trim();
-      
-      return sheetUsername.toLowerCase() === inputUsername.toLowerCase() &&
-             sheetPassword === inputPassword;
+
+      return sheetUserId.toLowerCase() === inputUsername.toLowerCase();
     });
 
     if (!match) {
-      console.log('Login failed: Invalid credentials');
-      return res.status(401).json({ error: 'Invalid username or password' });
+      console.log('Login failed: User not found');
+      return res.status(401).json({ error: 'User not found. Please check your username.' });
     }
 
-    // Use Name column if available, otherwise use username
-    const judgeName = String(match.Name || match.name || username).trim() || username;
-    console.log('Login successful for:', judgeName);
-    
-    res.json({ token: `judge:${username}`, judgeName: judgeName });
+    // Extract user data
+    const userId = String(match.USERID || match.userid || match.UserId || match.userId || username).trim();
+    const name = String(match.NAME || match.name || match.Name || userId).trim();
+    const isAdmin = String(match.ISADMIN || match.isadmin || match.IsAdmin || match.isAdmin || 'N').trim().toUpperCase() === 'Y';
+    const submitted = String(match.SUBMITTED || match.submitted || match.Submitted || 'N').trim().toUpperCase();
+
+    console.log('Login successful for:', name, '| Admin:', isAdmin, '| Submitted:', submitted);
+
+    res.json({
+      token: `user:${userId}`,
+      userId: userId,
+      name: name,
+      isAdmin: isAdmin,
+      submitted: submitted === 'Y'
+    });
   } catch (error) {
     console.error('Login error:', error);
     console.error('Stack:', error.stack);
@@ -451,32 +507,61 @@ app.get('/api/judge-scores', async (req, res) => {
   }
 });
 
-// Leaderboard: average per team across judges
+// Leaderboard: average per team across judges (only count submitted judges)
 app.get('/api/leaderboard', async (_req, res) => {
   try {
     await refreshCacheIfNeeded();
 
-    const agg = new Map(); // team -> { sum, count }
+    // Get list of users who have submitted
+    const usersRows = await readGoogleSheet(GOOGLE_SHEETS_CONFIG.USERS_SHEET_ID, GOOGLE_SHEETS_CONFIG.USERS_GID);
+    const submittedUsers = new Set();
+
+    for (const row of usersRows) {
+      const userId = String(row.USERID || row.userid || row.UserId || row.userId || '').trim();
+      const submitted = String(row.SUBMITTED || row.submitted || row.Submitted || 'N').trim().toUpperCase();
+      const name = String(row.NAME || row.name || row.Name || userId).trim();
+
+      if (submitted === 'Y' && userId) {
+        submittedUsers.add(name); // Use name as it's used in evaluations
+        submittedUsers.add(userId); // Also add userId in case it's used
+      }
+    }
+
+    console.log('Submitted users:', Array.from(submittedUsers));
+
+    const agg = new Map(); // team -> { sum, count, submittedCount }
 
     for (const [key, values] of evaluationCache.entries()) {
-      const [teamName] = key.split('|');
+      const [teamName, judgeName] = key.split('|');
 
-      if (!teamName) continue;
+      if (!teamName || !judgeName) continue;
 
       const total = EVAL_COLUMNS
         .filter(c => !['Team Name', 'Judge Name'].includes(c))
         .reduce((acc, c) => acc + (Number(values[c]) || 0), 0);
 
-      const cur = agg.get(teamName) || { sum: 0, count: 0 };
+      const cur = agg.get(teamName) || { sum: 0, count: 0, submittedCount: 0 };
       cur.sum += total;
       cur.count += 1;
+
+      // Check if this judge has submitted
+      if (submittedUsers.has(judgeName)) {
+        cur.submittedCount += 1;
+      }
+
       agg.set(teamName, cur);
     }
 
-    const result = Array.from(agg.entries()).map(([team, { sum, count }]) => ({
-      team,
-      average: count ? sum / count : 0
-    })).sort((a, b) => b.average - a.average);
+    // Calculate average based on submitted count, or fall back to total count
+    const result = Array.from(agg.entries()).map(([team, { sum, count, submittedCount }]) => {
+      const divisor = submittedCount > 0 ? submittedCount : count;
+      return {
+        team,
+        average: divisor ? sum / divisor : 0,
+        totalJudges: count,
+        submittedJudges: submittedCount
+      };
+    }).sort((a, b) => b.average - a.average);
 
     res.json(result);
   } catch (error) {

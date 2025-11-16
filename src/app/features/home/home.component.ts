@@ -15,11 +15,12 @@ import { ApiService } from '../../core/api.service';
       <div class="glass welcome-header" style="padding:20px; text-align:center; background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.1));">
         <div style="font-size:28px; margin-bottom:8px;">👋</div>
         <div style="font-weight:700; font-size:20px; background: linear-gradient(45deg, var(--adrak-green), var(--adrak-gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
-          أهلاً وسهلاً Welcome, {{ judgeName }}!
+          أهلاً وسهلاً Hi, {{ userName }}!
         </div>
-        <div style="font-size:14px; color:var(--muted); margin-top:4px;">
-          <i class="fas fa-gavel" style="margin-right:6px;"></i>
-          Ready to judge the competition
+        <div style="font-size:14px; color:var(--muted); margin-top:4px; display:flex; align-items:center; justify-content:center; gap:8px;">
+          <i class="fas fa-gavel"></i>
+          <span>{{ isAdmin ? 'Admin • View All Scores' : 'Judge • Ready to Score' }}</span>
+          <span *ngIf="submitted && !isAdmin" style="color:#22C55E;">✓ Submitted</span>
         </div>
       </div>
 
@@ -126,6 +127,39 @@ import { ApiService } from '../../core/api.service';
             <div style="font-size:12px; color:var(--muted);">Average</div>
             <i class="fas fa-star" style="color:#A855F7; margin-top:4px;"></i>
           </div>
+        </div>
+      </div>
+
+      <!-- Submit Button (for non-admin users) -->
+      <div *ngIf="!isAdmin && !submitted" class="glass" style="padding:16px;">
+        <div style="font-weight:600; margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+          <i class="fas fa-paper-plane" style="color:var(--accent);"></i>
+          Submit Your Evaluation
+        </div>
+        
+        <div style="padding:12px; background:rgba(255,215,0,0.1); border-radius:12px; margin-bottom:12px; border-left:4px solid #FFD700;">
+          <div style="font-size:14px; margin-bottom:4px; font-weight:600;">Ready to submit?</div>
+          <div style="font-size:12px; color:var(--muted);">
+            Go to the Scoring page to submit all your evaluations at once.
+          </div>
+        </div>
+        
+        <button (click)="goToScoring()" 
+                class="submit-btn glass card-animate"
+                style="width:100%; padding:16px; border-radius:12px; background:linear-gradient(135deg, var(--adrak-green), var(--adrak-gold)); border:none; color:white; font-weight:700; font-size:16px; cursor:pointer; transition: all 0.3s ease; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow: 0 4px 15px rgba(45, 90, 61, 0.3);">
+          <i class="fas fa-arrow-right"></i>
+          Go to Scoring Page to Submit
+        </button>
+      </div>
+
+      <!-- Submitted Confirmation (for non-admin users who have submitted) -->
+      <div *ngIf="!isAdmin && submitted" class="glass" style="padding:20px; text-align:center; background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(255, 255, 255, 0.05)); border:2px solid rgba(34, 197, 94, 0.3);">
+        <div style="font-size:48px; margin-bottom:12px;">✅</div>
+        <div style="font-weight:700; font-size:18px; color:#22C55E; margin-bottom:8px;">
+          Evaluation Submitted!
+        </div>
+        <div style="font-size:14px; color:var(--muted);">
+          Your scores have been submitted and are now included in the leaderboard.
         </div>
       </div>
 
@@ -306,6 +340,33 @@ import { ApiService } from '../../core/api.service';
           border: 2px solid rgba(255,255,255,0.3);
         }
       }
+
+      /* Submit button styles */
+      .submit-btn {
+        min-height: 56px;
+        touch-action: manipulation;
+      }
+      
+      .submit-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      
+      .submit-btn:not(:disabled):active {
+        transform: scale(0.98);
+      }
+      
+      @media (min-width: 768px) {
+        .submit-btn:not(:disabled):hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(45, 90, 61, 0.4);
+        }
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     </style>
   `
 })
@@ -313,9 +374,14 @@ export class HomeComponent implements OnInit {
   private api = inject(ApiService);
   private router = inject(Router);
 
-  judgeName = localStorage.getItem('judgeName') || '';
+  userName = localStorage.getItem('userName') || localStorage.getItem('judgeName') || '';
+  userId = localStorage.getItem('userId') || '';
+  isAdmin = localStorage.getItem('isAdmin') === 'true';
+  submitted = localStorage.getItem('submitted') === 'true';
+  judgeName = localStorage.getItem('judgeName') || ''; // For backward compatibility
   teams: string[] = [];
   scores: Record<string, number> = {};
+  submitting = false;
 
   ngOnInit(): void {
     this.api.getTeams().subscribe(t => this.teams = t);
@@ -393,6 +459,11 @@ export class HomeComponent implements OnInit {
     const completed = this.getCompletedTeams();
     if (completed === 0) return 0;
     return Math.round(this.getTotalScore() / completed);
+  }
+
+  goToScoring() {
+    // Redirect to scoring page for submission
+    this.router.navigate(['/tabs/scoring']);
   }
 }
 

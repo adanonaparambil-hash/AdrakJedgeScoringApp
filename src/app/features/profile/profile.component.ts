@@ -11,14 +11,23 @@ import { Router } from '@angular/router';
       
       <!-- Profile Header -->
       <div class="glass profile-header" style="padding:20px; text-align:center; background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));">
-        <div style="font-size:64px; margin-bottom:12px;">👨‍⚖️</div>
-        <div style="font-weight:700; font-size:24px; margin-bottom:4px;">{{ judgeName }}</div>
+        <div style="font-size:64px; margin-bottom:12px;">{{ isAdmin ? '👨‍💼' : '👨‍⚖️' }}</div>
+        <div style="font-weight:700; font-size:24px; margin-bottom:4px;">{{ userName }}</div>
+        <div style="font-size:12px; color:var(--muted); margin-bottom:8px;">User ID: {{ userId }}</div>
         <div style="font-size:14px; color:var(--muted); display:flex; align-items:center; justify-content:center; gap:6px;">
           <i class="fas fa-gavel"></i>
-          Competition Judge
+          {{ isAdmin ? 'Administrator' : 'Competition Judge' }}
         </div>
-        <div style="margin-top:12px; padding:8px 16px; background:rgba(139, 92, 246, 0.2); border-radius:20px; display:inline-block;">
-          <span style="font-size:12px; color:rgba(255,255,255,0.9);">🏆 Active Session</span>
+        <div style="margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+          <div style="padding:8px 16px; background:rgba(139, 92, 246, 0.2); border-radius:20px; display:inline-block;">
+            <span style="font-size:12px; color:rgba(255,255,255,0.9);">🏆 Active Session</span>
+          </div>
+          <div *ngIf="isAdmin" style="padding:8px 16px; background:rgba(255, 215, 0, 0.2); border-radius:20px; display:inline-block;">
+            <span style="font-size:12px; color:rgba(255,255,255,0.9);">👑 Admin</span>
+          </div>
+          <div *ngIf="submitted && !isAdmin" style="padding:8px 16px; background:rgba(34, 197, 94, 0.2); border-radius:20px; display:inline-block;">
+            <span style="font-size:12px; color:rgba(255,255,255,0.9);">✓ Submitted</span>
+          </div>
         </div>
       </div>
 
@@ -37,9 +46,9 @@ import { Router } from '@angular/router';
           </div>
           
           <div class="stat-item glass" style="padding:12px; text-align:center; background:rgba(59, 130, 246, 0.1);">
-            <div style="font-size:20px; margin-bottom:4px;">🎯</div>
+            <div style="font-size:20px; margin-bottom:4px;">{{ isAdmin ? '👑' : '🎯' }}</div>
             <div style="font-size:12px; color:var(--muted);">Role</div>
-            <div style="font-weight:600; color:#3B82F6;">Judge</div>
+            <div style="font-weight:600; color:#3B82F6;">{{ isAdmin ? 'Admin' : 'Judge' }}</div>
           </div>
           
           <div class="stat-item glass" style="padding:12px; text-align:center; background:rgba(168, 85, 247, 0.1);">
@@ -201,11 +210,20 @@ import { Router } from '@angular/router';
   `
 })
 export class ProfileComponent {
-  judgeName = localStorage.getItem('judgeName') || 'Unknown';
+  userName = localStorage.getItem('userName') || localStorage.getItem('judgeName') || 'Unknown';
+  userId = localStorage.getItem('userId') || '';
+  isAdmin = localStorage.getItem('isAdmin') === 'true';
+  submitted = localStorage.getItem('submitted') === 'true';
+  
   constructor(private router: Router) { }
+  
   logout() {
     localStorage.removeItem('token');
-    localStorage.removeItem('judgeName');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('submitted');
+    localStorage.removeItem('judgeName'); // For backward compatibility
     this.router.navigateByUrl('/');
   }
 }

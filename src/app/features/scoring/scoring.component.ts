@@ -83,7 +83,7 @@ const PRESENTATION_KEYS = [
             {{ activeTeam }} Team Evaluation
           </div>
           <div style="font-size:14px; color:rgba(255,255,255,0.9); margin-top:4px;">
-            Judge: {{ judgeName }}
+            Judge: {{ userName }}
           </div>
           
           <!-- Animated background -->
@@ -121,8 +121,11 @@ const PRESENTATION_KEYS = [
                 <input type="range" min="0" max="10" 
                        [(ngModel)]="values[key]" 
                        (ngModelChange)="onChanged()"
+                       [disabled]="submitted"
                        class="custom-slider"
-                       style="flex:1; height:8px; border-radius:4px; outline:none; cursor:pointer;"
+                       style="flex:1; height:8px; border-radius:4px; outline:none;"
+                       [style.cursor]="submitted ? 'not-allowed' : 'pointer'"
+                       [style.opacity]="submitted ? '0.6' : '1'"
                        [style.background]="getSliderBackground(values[key] || 0, '#FF6B6B')" />
                 <div class="score-labels" style="display:flex; gap:4px; font-size:10px; color:var(--muted);">
                   <span>Poor</span>
@@ -164,8 +167,11 @@ const PRESENTATION_KEYS = [
                 <input type="range" min="0" max="10" 
                        [(ngModel)]="values[key]" 
                        (ngModelChange)="onChanged()"
+                       [disabled]="submitted"
                        class="custom-slider"
-                       style="flex:1; height:8px; border-radius:4px; outline:none; cursor:pointer;"
+                       style="flex:1; height:8px; border-radius:4px; outline:none;"
+                       [style.cursor]="submitted ? 'not-allowed' : 'pointer'"
+                       [style.opacity]="submitted ? '0.6' : '1'"
                        [style.background]="getSliderBackground(values[key] || 0, '#4ADE80')" />
                 <div class="score-labels" style="display:flex; gap:4px; font-size:10px; color:var(--muted);">
                   <span>Poor</span>
@@ -207,8 +213,11 @@ const PRESENTATION_KEYS = [
                 <input type="range" min="0" max="10" 
                        [(ngModel)]="values[key]" 
                        (ngModelChange)="onChanged()"
+                       [disabled]="submitted"
                        class="custom-slider"
-                       style="flex:1; height:8px; border-radius:4px; outline:none; cursor:pointer;"
+                       style="flex:1; height:8px; border-radius:4px; outline:none;"
+                       [style.cursor]="submitted ? 'not-allowed' : 'pointer'"
+                       [style.opacity]="submitted ? '0.6' : '1'"
                        [style.background]="getSliderBackground(values[key] || 0, '#A855F7')" />
                 <div class="score-labels" style="display:flex; gap:4px; font-size:10px; color:var(--muted);">
                   <span>Poor</span>
@@ -258,6 +267,43 @@ const PRESENTATION_KEYS = [
           <div *ngIf="savedAt && !saving" class="glass" style="padding:12px; background:rgba(34, 197, 94, 0.1); border:1px solid rgba(34, 197, 94, 0.3); border-radius:20px; display:inline-flex; align-items:center; gap:8px; animation: fadeIn 0.5s ease-in;">
             <i class="fas fa-check-circle" style="color:#22C55E;"></i>
             <span style="color:#22C55E; font-weight:600;">Evaluation saved successfully!</span>
+          </div>
+        </div>
+
+        <!-- Submit Button (if not submitted) -->
+        <div *ngIf="!submitted" class="glass" style="padding:20px; margin-top:16px; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,255,255,0.05)); border:2px solid rgba(255,215,0,0.3);">
+          <div style="text-align:center; margin-bottom:16px;">
+            <div style="font-size:32px; margin-bottom:8px;">🏆</div>
+            <div style="font-weight:700; font-size:20px; margin-bottom:8px;">Ready to Submit?</div>
+            <div style="font-size:14px; color:var(--muted); margin-bottom:4px;">
+              Make sure you've scored all teams before submitting.
+            </div>
+            <div style="font-size:12px; color:var(--muted);">
+              After submission, you won't be able to edit your scores.
+            </div>
+          </div>
+          
+          <button (click)="submitAllEvaluations()" 
+                  [disabled]="submitting"
+                  class="submit-btn glass card-animate"
+                  style="width:100%; padding:18px; border-radius:12px; background:linear-gradient(135deg, var(--adrak-green), var(--adrak-gold)); border:none; color:white; font-weight:700; font-size:18px; cursor:pointer; transition: all 0.3s ease; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow: 0 4px 15px rgba(45, 90, 61, 0.3);">
+            <span *ngIf="submitting" class="spinner" style="width:24px; height:24px; border:3px solid rgba(255,255,255,0.3); border-top:3px solid white; border-radius:50%; animation: spin 1s linear infinite;"></span>
+            <i *ngIf="!submitting" class="fas fa-paper-plane" style="font-size:20px;"></i>
+            {{ submitting ? 'Submitting All Evaluations...' : 'Submit All Evaluations' }}
+          </button>
+        </div>
+
+        <!-- Submitted Confirmation -->
+        <div *ngIf="submitted" class="glass" style="padding:24px; margin-top:16px; text-align:center; background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(255, 255, 255, 0.05)); border:2px solid rgba(34, 197, 94, 0.3);">
+          <div style="font-size:64px; margin-bottom:12px;">✅</div>
+          <div style="font-weight:700; font-size:24px; color:#22C55E; margin-bottom:8px;">
+            Evaluation Submitted!
+          </div>
+          <div style="font-size:14px; color:var(--muted); margin-bottom:8px;">
+            Your scores have been saved to Google Sheets.
+          </div>
+          <div style="font-size:12px; color:var(--muted);">
+            You can view your scores but cannot edit them anymore.
           </div>
         </div>
       </div>
@@ -498,7 +544,10 @@ export class ScoringComponent implements OnInit, OnDestroy {
   readonly MUSIC_KEYS = MUSIC_KEYS;
   readonly PRESENTATION_KEYS = PRESENTATION_KEYS;
 
-  judgeName = localStorage.getItem('judgeName') || '';
+  userName = localStorage.getItem('userName') || localStorage.getItem('judgeName') || '';
+  userId = localStorage.getItem('userId') || '';
+  judgeName = localStorage.getItem('judgeName') || localStorage.getItem('userName') || ''; // For API compatibility
+  submitted = localStorage.getItem('submitted') === 'true';
   teams: string[] = ['Blue', 'Red', 'Green'];
   activeTeam = 'Blue';
   values: EvaluationValues = {};
@@ -506,6 +555,7 @@ export class ScoringComponent implements OnInit, OnDestroy {
   isLoading = false;
   saving = false;
   savedAt = false;
+  submitting = false;
 
   ngOnInit(): void {
     const qp$ = this.route.queryParamMap as unknown as import('rxjs').Observable<ParamMap>;
@@ -735,6 +785,59 @@ export class ScoringComponent implements OnInit, OnDestroy {
         }
       });
     }
+  }
+
+  submitAllEvaluations() {
+    if (!this.userId || !this.userName || this.submitting) return;
+
+    // Save current team values before submitting
+    if (this.activeTeam && this.values) {
+      this.valuesByTeam[this.activeTeam] = { ...this.values };
+      this.state.set(this.judgeName, this.activeTeam, this.valuesByTeam[this.activeTeam]);
+    }
+
+    // Check if all teams have been scored
+    const allTeamsScored = this.teams.every(team => {
+      const teamValues = this.valuesByTeam[team];
+      if (!teamValues) return false;
+      
+      // Check if at least some scores are entered
+      const hasScores = Object.values(teamValues).some(v => v > 0);
+      return hasScores;
+    });
+
+    if (!allTeamsScored) {
+      const confirm = window.confirm(
+        'Not all teams have been scored. Do you want to submit anyway?'
+      );
+      if (!confirm) return;
+    }
+
+    this.submitting = true;
+
+    // Convert valuesByTeam to Map for API
+    const scoresMap = new Map<string, EvaluationValues>();
+    Object.keys(this.valuesByTeam).forEach(team => {
+      scoresMap.set(team, this.valuesByTeam[team]);
+    });
+
+    this.api.submitEvaluation(this.userId, this.userName, scoresMap).subscribe({
+      next: (res) => {
+        this.submitting = false;
+        if (res.ok) {
+          this.submitted = true;
+          localStorage.setItem('submitted', 'true');
+          alert('✅ All evaluations submitted successfully!\n\nYour scores have been saved to Google Sheets and you are now marked as submitted.');
+        } else {
+          alert('❌ ' + res.message);
+        }
+      },
+      error: (err) => {
+        this.submitting = false;
+        console.error('Submit error:', err);
+        alert('❌ Failed to submit evaluations. Please make sure the server is running on http://localhost:3000');
+      }
+    });
   }
 }
 

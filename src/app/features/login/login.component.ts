@@ -40,25 +40,10 @@ import { ApiService } from '../../core/api.service';
           <label style="display:block;">
             <div style="font-size:13px; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
               <i class="fas fa-user" style="width:14px;"></i>
-              Username
+              User ID
             </div>
             <input formControlName="username" 
-                   placeholder="Enter your username" 
-                   class="login-input"
-                   style="width:100%; padding:14px 16px; border-radius:12px; border:2px solid var(--glass-border); background:rgba(255,255,255,0.08); color:var(--text); font-size:16px; transition: all 0.3s ease;" />
-          </label>
-        </div>
-
-        <!-- Password Field -->
-        <div class="input-group">
-          <label style="display:block;">
-            <div style="font-size:13px; color:var(--muted); margin-bottom:8px; display:flex; align-items:center; gap:6px;">
-              <i class="fas fa-lock" style="width:14px;"></i>
-              Password
-            </div>
-            <input type="password" 
-                   formControlName="password" 
-                   placeholder="Enter your password" 
+                   placeholder="Enter your user ID" 
                    class="login-input"
                    style="width:100%; padding:14px 16px; border-radius:12px; border:2px solid var(--glass-border); background:rgba(255,255,255,0.08); color:var(--text); font-size:16px; transition: all 0.3s ease;" />
           </label>
@@ -271,26 +256,31 @@ export class LoginComponent {
   error = '';
 
   form = this.fb.group({
-    username: ['', Validators.required],
-    password: ['', Validators.required]
+    username: ['', Validators.required]
   });
 
   onSubmit() {
     if (this.form.invalid) return;
-    const { username, password } = this.form.value as { username: string; password: string };
+    const { username } = this.form.value as { username: string };
     this.loading = true;
     this.error = '';
-    this.api.login(username, password).subscribe({
+    this.api.login(username).subscribe({
       next: (res) => {
         this.loading = false;
+        // Store user data in localStorage
         localStorage.setItem('token', res.token);
-        localStorage.setItem('judgeName', res.judgeName);
+        localStorage.setItem('userId', res.userId);
+        localStorage.setItem('userName', res.name);
+        localStorage.setItem('isAdmin', res.isAdmin.toString());
+        localStorage.setItem('submitted', res.submitted.toString());
+        // Keep judgeName for backward compatibility
+        localStorage.setItem('judgeName', res.name);
         this.router.navigateByUrl('/tabs/home');
       },
       error: (err) => {
         this.loading = false;
         // Show detailed error message from server
-        const errorMessage = err?.error?.error || err?.message || 'Login failed. Please check your credentials and try again.';
+        const errorMessage = err?.error?.error || err?.message || 'Login failed. Please check your username and try again.';
         this.error = errorMessage;
         console.error('Login error:', err);
       }
