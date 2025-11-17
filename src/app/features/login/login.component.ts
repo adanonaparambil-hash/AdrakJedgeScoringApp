@@ -267,6 +267,14 @@ export class LoginComponent {
     this.api.login(username).subscribe({
       next: (res) => {
         this.loading = false;
+        
+        console.log('✅ Login successful:', {
+          userId: res.userId,
+          name: res.name,
+          isAdmin: res.isAdmin,
+          submitted: res.submitted
+        });
+        
         // Store user data in localStorage
         localStorage.setItem('token', res.token);
         localStorage.setItem('userId', res.userId);
@@ -275,7 +283,22 @@ export class LoginComponent {
         localStorage.setItem('submitted', res.submitted.toString());
         // Keep judgeName for backward compatibility
         localStorage.setItem('judgeName', res.name);
-        this.router.navigateByUrl('/tabs/home');
+        
+        console.log('📦 Stored in localStorage:', {
+          isAdmin: localStorage.getItem('isAdmin'),
+          userName: localStorage.getItem('userName')
+        });
+        
+        // Redirect based on admin status
+        if (res.isAdmin) {
+          // Admin users go directly to leaderboard
+          console.log('🔄 Redirecting admin to leaderboard');
+          this.router.navigateByUrl('/tabs/leaderboard');
+        } else {
+          // Regular judges go to home
+          console.log('🔄 Redirecting judge to home');
+          this.router.navigateByUrl('/tabs/home');
+        }
       },
       error: (err) => {
         this.loading = false;

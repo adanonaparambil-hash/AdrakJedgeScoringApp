@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
-import { ApiService } from '../../core/api.service';
+import { ApiService, JudgeScore, TeamJudgeScoresResponse } from '../../core/api.service';
 import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
 
 @Component({
@@ -11,21 +11,21 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
   template: `
     <div style="display:flex; flex-direction:column; gap:16px;">
       
-      <!-- Access Denied for Non-Admin -->
-      <div *ngIf="!isAdmin" class="glass" style="padding:24px; text-align:center; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(255, 255, 255, 0.05)); border:2px solid rgba(239, 68, 68, 0.3);">
+      <!-- Permission Required Message for Non-Admin Users -->
+      <div *ngIf="!isAdmin" class="glass" style="padding:20px; text-align:center; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(255, 255, 255, 0.05)); border:2px solid rgba(239, 68, 68, 0.3);">
         <div style="font-size:48px; margin-bottom:12px;">🔒</div>
-        <div style="font-weight:700; font-size:20px; color:#EF4444; margin-bottom:8px;">
-          Admin Access Required
+        <div style="font-weight:700; font-size:18px; color:#EF4444; margin-bottom:8px;">
+          Admin Permission Required
         </div>
-        <div style="font-size:14px; color:var(--muted); margin-bottom:16px;">
-          The leaderboard is only visible to administrators.
+        <div style="font-size:14px; color:var(--muted); margin-bottom:12px;">
+          Full leaderboard access is restricted to administrators only.
         </div>
         <div style="font-size:12px; color:var(--muted);">
-          You can view your own scores on the Home and Profile pages.
+          Contact your administrator for access to detailed rankings and judge scores.
         </div>
       </div>
-
-      <!-- Admin Leaderboard View -->
+      
+      <!-- Leaderboard View (Admin Only) -->
       <ng-container *ngIf="isAdmin">
         <!-- Header -->
         <div class="glass" style="padding:16px; text-align:center; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,255,255,0.05));">
@@ -98,7 +98,7 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
              [style.borderLeft]="'4px solid ' + color(row.team)">
           
           <!-- Rank Icon -->
-          <div style="display:flex; align-items:center; gap:12px;">
+          <div style="display:flex; align-items:center; gap:12px; flex:1;">
             <div class="rank-badge" [style.background]="getRankBadgeColor(i)" 
                  style="width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; color:white; font-size:16px;">
               <span *ngIf="i < 3">{{ getRankIcon(i) }}</span>
@@ -106,24 +106,34 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
             </div>
             
             <!-- Team Info -->
-            <div>
+            <div style="flex:1;">
               <div style="font-weight:600; font-size:16px; display:flex; align-items:center; gap:8px;">
                 {{ row.team }} Team
                 <span *ngIf="i === 0" style="font-size:12px;">👑</span>
               </div>
               <div style="font-size:12px; color:var(--muted);">
                 Position {{ i + 1 }}
-                <span *ngIf="row.submittedJudges !== undefined"> • {{ row.submittedJudges }}/{{ row.totalJudges }} submitted</span>
+                <span *ngIf="row.submittedJudges !== undefined"> • {{ row.submittedJudges }}/{{ row.totalJudges }} judges</span>
               </div>
             </div>
           </div>
 
-          <!-- Score -->
-          <div style="text-align:right;">
-            <div style="font-weight:700; font-size:18px; font-variant-numeric: tabular-nums;" [style.color]="getScoreColor(i)">
-              {{ row.average | number:'1.0-0' }}
+          <!-- Score and View Button (Admin Only) -->
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div style="text-align:right;">
+              <div style="font-weight:700; font-size:18px; font-variant-numeric: tabular-nums;" [style.color]="getScoreColor(i)">
+                {{ row.average | number:'1.0-0' }}
+              </div>
+              <div style="font-size:12px; color:var(--muted);">out of 120</div>
             </div>
-            <div style="font-size:12px; color:var(--muted);">out of 120</div>
+            
+            <!-- View Judges Button - Only for Admins -->
+            <button *ngIf="isAdmin" (click)="viewTeamScores(row.team)" 
+                    class="glass"
+                    style="padding:8px 12px; border-radius:8px; border:none; background:rgba(255,255,255,0.1); color:white; cursor:pointer; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; transition: all 0.3s ease;">
+              <i class="fas fa-users"></i>
+              <span class="view-btn-text">View Judges</span>
+            </button>
           </div>
 
           <!-- Progress Bar -->
@@ -141,10 +151,98 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
       </div>
 
       <!-- Celebration Animation -->
-      <div *ngIf="animate && isAdmin" style="text-align:center; font-size:32px; animation: celebration 1.2s ease-in-out;">
+      <div *ngIf="animate" style="text-align:center; font-size:32px; animation: celebration 1.2s ease-in-out;">
         🎉 🏆 🎊 🥇 🎉
       </div>
       </ng-container>
+
+      <!-- Individual Judge Scores Modal (Admin Only) -->
+      <div *ngIf="selectedTeam" 
+           style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:1000; padding:16px; backdrop-filter: blur(5px);"
+           (click)="closeTeamScores()">
+        <div class="glass" 
+             style="max-width:600px; width:100%; max-height:80vh; overflow-y:auto; padding:20px; border-radius:16px; background: linear-gradient(135deg, rgba(30,30,30,0.95), rgba(20,20,20,0.95));"
+             (click)="$event.stopPropagation()">
+          
+          <!-- Modal Header -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:16px; border-bottom:2px solid rgba(255,255,255,0.1);">
+            <div>
+              <div style="font-weight:700; font-size:20px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-users" [style.color]="color(selectedTeam)"></i>
+                {{ selectedTeam }} Team - Judge Scores
+              </div>
+              <div style="font-size:12px; color:var(--muted); margin-top:4px;">
+                Individual judge evaluations
+              </div>
+            </div>
+            <button (click)="closeTeamScores()" 
+                    style="width:36px; height:36px; border-radius:50%; border:none; background:rgba(255,255,255,0.1); color:white; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; transition: all 0.3s ease;">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <!-- Judge Scores List -->
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div *ngFor="let judge of teamJudgeScores; let i = index" 
+                 class="glass card-animate"
+                 style="padding:16px; border-radius:12px; display:flex; justify-content:space-between; align-items:center; transition: all 0.3s ease;"
+                 [style.background]="judge.isAdmin ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.05)'"
+                 [style.borderLeft]="judge.isAdmin ? '4px solid #FFD700' : '4px solid rgba(255,255,255,0.2)'">
+              
+              <div style="display:flex; align-items:center; gap:12px; flex:1;">
+                <!-- Rank -->
+                <div style="width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.1); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px;">
+                  {{ i + 1 }}
+                </div>
+                
+                <!-- Judge Info -->
+                <div style="flex:1;">
+                  <div style="font-weight:600; font-size:15px; display:flex; align-items:center; gap:8px;">
+                    {{ judge.judgeName }}
+                    <span *ngIf="judge.isAdmin" style="font-size:11px; padding:2px 6px; background:rgba(255,215,0,0.2); border-radius:4px; color:#FFD700;">ADMIN</span>
+                    <span *ngIf="!judge.isAdmin && judge.submitted" style="font-size:11px; padding:2px 6px; background:rgba(34,197,94,0.2); border-radius:4px; color:#22C55E;">✓ Submitted</span>
+                  </div>
+                  <div style="font-size:12px; color:var(--muted);">
+                    {{ judge.isAdmin ? 'Administrator' : 'Judge' }}
+                    <span *ngIf="!judge.isAdmin && !judge.submitted" style="color:#EF4444;"> • Not submitted</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Score -->
+              <div style="text-align:right;">
+                <div style="font-weight:700; font-size:20px; color:var(--adrak-gold);">
+                  {{ judge.score }}
+                </div>
+                <div style="font-size:11px; color:var(--muted);">/ 120</div>
+              </div>
+            </div>
+
+            <div *ngIf="teamJudgeScores.length === 0" style="text-align:center; padding:40px; color:var(--muted);">
+              <i class="fas fa-inbox" style="font-size:48px; margin-bottom:12px; opacity:0.3;"></i>
+              <div style="font-size:14px;">No scores yet for this team</div>
+            </div>
+          </div>
+
+          <!-- Summary -->
+          <div *ngIf="teamJudgeScores.length > 0" class="glass" style="margin-top:20px; padding:16px; border-radius:12px; background:rgba(255,255,255,0.05);">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:12px; text-align:center;">
+              <div>
+                <div style="font-size:24px; font-weight:700; color:var(--adrak-gold);">
+                  {{ getNonAdminCount() }}
+                </div>
+                <div style="font-size:12px; color:var(--muted);">Total Judges</div>
+              </div>
+              <div>
+                <div style="font-size:24px; font-weight:700; color:#3B82F6;">
+                  {{ getSubmittedCount() }}
+                </div>
+                <div style="font-size:12px; color:var(--muted);">Submitted</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <style>
@@ -321,6 +419,25 @@ import { interval, Subject, switchMap, takeUntil, startWith } from 'rxjs';
           border: 2px solid rgba(255,255,255,0.3);
         }
       }
+
+      /* View button responsive */
+      .view-btn-text {
+        display: none;
+      }
+      
+      @media (min-width: 768px) {
+        .view-btn-text {
+          display: inline;
+        }
+      }
+
+      /* Modal responsive */
+      @media (max-width: 767px) {
+        .ranking-item button {
+          padding: 6px 8px !important;
+          font-size: 11px !important;
+        }
+      }
     </style>
   `
 })
@@ -334,13 +451,25 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
   lastTop = '';
   lastWinner = '';
   animate = false;
+  selectedTeam: string | null = null;
+  teamJudgeScores: JudgeScore[] = [];
+  totalNonAdminJudges = 0;
+  submittedJudgesCount = 0;
 
   ngOnInit(): void {
+    console.log('🏆 Leaderboard component initialized');
+    console.log('👤 User info:', {
+      isAdmin: this.isAdmin,
+      userName: this.userName,
+      rawIsAdmin: localStorage.getItem('isAdmin')
+    });
+    
     interval(3000).pipe(
       startWith(0),
       switchMap(() => this.api.getLeaderboard()),
       takeUntil(this.destroy$)
     ).subscribe(rows => {
+      console.log('📊 Leaderboard data received:', rows);
       const top = rows[0]?.team || '';
       if (this.lastTop && top && top !== this.lastTop) {
         this.animate = true;
@@ -388,6 +517,30 @@ export class LeaderboardComponent implements OnInit, OnDestroy {
     if (index === 1) return '#C0C0C0';
     if (index === 2) return '#CD7F32';
     return 'inherit';
+  }
+
+  viewTeamScores(team: string): void {
+    this.selectedTeam = team;
+    this.api.getTeamJudgeScores(team).subscribe(response => {
+      this.teamJudgeScores = response.scores;
+      this.totalNonAdminJudges = response.totalNonAdminJudges;
+      this.submittedJudgesCount = response.submittedCount;
+    });
+  }
+
+  closeTeamScores(): void {
+    this.selectedTeam = null;
+    this.teamJudgeScores = [];
+    this.totalNonAdminJudges = 0;
+    this.submittedJudgesCount = 0;
+  }
+
+  getNonAdminCount(): number {
+    return this.totalNonAdminJudges;
+  }
+
+  getSubmittedCount(): number {
+    return this.submittedJudgesCount;
   }
 }
 

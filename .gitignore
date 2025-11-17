@@ -17,6 +17,7 @@ dist/
 
 # Google Sheets API credentials
 service-account-key.json
+src/service-account-key.json
 
 # IDE & Editor files
 .vscode/

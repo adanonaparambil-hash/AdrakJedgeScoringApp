@@ -1,169 +1,121 @@
-# 🚀 START HERE - CGT Judge App
+# 🚀 START HERE - No Backend Setup
 
-## ✨ No Backend Required!
+## The Situation
 
-This app works **directly with Google Sheets** - no server needed!
+You want to write to Google Sheets directly from Angular **WITHOUT a Node.js backend server**.
 
----
+**Problem:** Browsers cannot use service account credentials securely (they can't sign JWT tokens with RSA private keys).
 
-## 📋 Quick Setup (3 Steps)
-
-### Step 1: Prepare Google Sheets ⏱️ 2 minutes
-
-#### Sheet 1 - Users
-**URL:** https://docs.google.com/spreadsheets/d/1iKFh699K_TapsbUG539bvUG7rYvNN0eA/edit?gid=1017169916
-
-**Add these columns:**
-```
-USERID | NAME | SUBMITTED | ISADMIN
-```
-
-**Add sample data:**
-```
-admin  | Admin User  | N | Y
-judge1 | Judge One   | N | N
-judge2 | Judge Two   | N | N
-```
-
-**Share:** Click "Share" → "Anyone with the link" → "Viewer"
-
-#### Sheet 2 - Evaluations
-**URL:** https://docs.google.com/spreadsheets/d/1e8_bLRJqe6m9vAnc6Jmx6pam1NoJT6nI/edit?gid=1688314091
-
-**Verify columns exist** (Team Name, Judge Name, + 12 criteria)
-
-**Share:** Click "Share" → "Anyone with the link" → "Viewer"
+**Solution:** Deploy a Google Apps Script Web App (it's like a mini API that runs on Google's servers).
 
 ---
 
-### Step 2: Start the App ⏱️ 1 minute
+## ✅ Quick Setup (5 Minutes)
+
+### Step 1: Deploy Google Apps Script
+
+Follow the instructions in: **`DEPLOY_GOOGLE_APPS_SCRIPT.md`**
+
+Summary:
+1. Open your Evaluation Sheet
+2. Go to Extensions → Apps Script
+3. Paste the provided code
+4. Deploy as Web App
+5. Copy the Web App URL
+
+### Step 2: Update Angular App
+
+Open `src/app/core/api.service.ts` (line ~48):
+
+```typescript
+private readonly APPS_SCRIPT_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+```
+
+Replace with your actual Web App URL from Step 1.
+
+### Step 3: Run the App
 
 ```bash
-npm install
-ng serve
+npm start
 ```
 
-Open: http://localhost:4200
+Open http://localhost:4200
 
 ---
 
-### Step 3: Test Login ⏱️ 30 seconds
+## 🎯 How It Works
 
-**Login as Admin:**
-- User ID: `admin`
-- Click "Sign In"
-- ✅ Should see leaderboard
-
-**Login as Judge:**
-- User ID: `judge1`
-- Click "Sign In"
-- ✅ Should see submit button
-- ❌ Cannot view leaderboard
-
----
-
-## 🎯 Key Features
-
-### ✅ What Works
-- Login with User ID (no password!)
-- Score teams (0-120 points)
-- Auto-save to browser
-- Submit evaluation
-- Leaderboard (admin only)
-- Role-based access
-
-### ⚠️ Manual Steps
-- Update SUBMITTED column in sheet (N → Y)
-- Scores saved in browser only
-
----
-
-## 📚 Documentation
-
-**New to the app?**
-→ Read **NO_BACKEND_SETUP.md**
-
-**Need detailed setup?**
-→ Read **GOOGLE_SHEETS_TEMPLATE.md**
-
-**Want to understand everything?**
-→ Read **DOCUMENTATION_INDEX.md**
-
----
-
-## 🐛 Troubleshooting
-
-### "User not found"
-1. Check USERID exists in Users Sheet
-2. Verify sheet is publicly viewable
-3. Test CSV URL in browser:
-   ```
-   https://docs.google.com/spreadsheets/d/1iKFh699K_TapsbUG539bvUG7rYvNN0eA/export?format=csv&gid=1017169916
-   ```
-
-### CORS Errors
-1. Make sure sheets are publicly viewable
-2. Check "Share" settings
-3. Try in incognito mode
-
-### Scores Not Saving
-1. Check browser localStorage is enabled
-2. Clear cache and reload
-3. Check browser console (F12)
-
----
-
-## 🎊 That's It!
-
-**No server needed!**
-**No database needed!**
-**Just Google Sheets + Angular!**
-
-Start the app and login with any USERID from your sheet! 🚀
-
----
-
-## 📞 Quick Links
-
-- **Setup Guide:** NO_BACKEND_SETUP.md
-- **Sheet Templates:** GOOGLE_SHEETS_TEMPLATE.md
-- **All Docs:** DOCUMENTATION_INDEX.md
-- **Troubleshooting:** NO_BACKEND_SETUP.md (Troubleshooting section)
-
----
-
-## ⚡ Commands
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-ng serve
-
-# Build for production
-ng build --configuration production
-
-# That's all! No backend server needed!
+```
+Angular App (Browser)
+    ↓ READ (CSV Export)
+Google Sheets
+    ↑ WRITE (via Apps Script)
+Angular App → Google Apps Script Web App → Google Sheets
 ```
 
----
-
-## 🎯 Next Steps
-
-1. ✅ Add your real users to Users Sheet
-2. ✅ Test login with each user
-3. ✅ Test scoring workflow
-4. ✅ Test admin features
-5. ✅ Test judge features
-6. ✅ Deploy to static hosting (optional)
+**Read operations:** Direct from Google Sheets (CSV export, no auth)
+**Write operations:** Through Google Apps Script Web App (runs on Google's servers)
 
 ---
 
-**Ready? Let's go!** 🚀
+## ✅ Benefits
 
-```bash
-ng serve
-```
+- ✅ No Node.js backend server needed
+- ✅ No `npm run server` required
+- ✅ No `service-account-key.json` needed in frontend
+- ✅ Secure (credentials stay on Google's servers)
+- ✅ Direct integration with Google Sheets
+- ✅ Free and scalable
 
-Then open http://localhost:4200 and login!
+---
+
+## 📝 Current Status
+
+Right now, the app:
+- ✅ Reads from Google Sheets (works)
+- ⚠️ Writes to localStorage (fallback until you deploy Apps Script)
+
+After deploying Apps Script:
+- ✅ Reads from Google Sheets
+- ✅ Writes to Google Sheets (real-time sync)
+
+---
+
+## 🧪 Test It
+
+1. **Before Apps Script:** Data saves to browser localStorage only
+2. **After Apps Script:** Data writes directly to Google Sheets
+
+---
+
+## 📁 Important Files
+
+- `DEPLOY_GOOGLE_APPS_SCRIPT.md` - Step-by-step deployment guide
+- `src/app/core/api.service.ts` - Update line 48 with your Web App URL
+- `service-account-key.json` - NOT USED in frontend (security risk)
+
+---
+
+## ⚠️ Why Not Use Service Account in Frontend?
+
+**Security reasons:**
+1. Private keys would be exposed in browser code
+2. Anyone can view source code and steal credentials
+3. Browsers can't sign JWT tokens with RSA keys
+4. CORS policy blocks direct API calls
+
+**Google Apps Script solves this:**
+- Runs on Google's servers (not in browser)
+- Credentials never exposed to users
+- No CORS issues
+- Simple to deploy and maintain
+
+---
+
+## 🆘 Need Help?
+
+See `DEPLOY_GOOGLE_APPS_SCRIPT.md` for detailed instructions with screenshots and troubleshooting.
+
+---
+
+**TL;DR:** Deploy Google Apps Script Web App (5 min), paste URL in api.service.ts, done! 🎉

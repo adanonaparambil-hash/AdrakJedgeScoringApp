@@ -8,14 +8,16 @@ app.use(express.json());
 
 // Google Sheets configuration
 const GOOGLE_SHEETS_CONFIG = {
-  // Evaluation Results Sheet
-  EVAL_SHEET_ID: '1e8_bLRJqe6m9vAnc6Jmx6pam1NoJT6nI',
-  EVAL_GID: '1688314091', // From the URL gid parameter
-
   // Users Sheet (Login + Admin + Submitted tracking)
-  USERS_SHEET_ID: '1iKFh699K_TapsbUG539bvUG7rYvNN0eA',
-  USERS_GID: '1017169916', // From the URL gid parameter
+  // URL: https://docs.google.com/spreadsheets/d/1jLyGbkHE_fopA1QwYHsvezRZeNBu4ylXTiVQol0QNDQ/edit?gid=617871645#gid=617871645
+  USERS_SHEET_ID: '1jLyGbkHE_fopA1QwYHsvezRZeNBu4ylXTiVQol0QNDQ',
+  USERS_GID: '617871645',
   // Columns: USERID, NAME, SUBMITTED, ISADMIN
+
+  // Evaluation Results Sheet
+  // URL: https://docs.google.com/spreadsheets/d/1aYLnFkq969TOuQ2b0hY6jS2neCf5CHeV-En78QmARf4/edit?gid=1574680633#gid=1574680633
+  EVAL_SHEET_ID: '1aYLnFkq969TOuQ2b0hY6jS2neCf5CHeV-En78QmARf4',
+  EVAL_GID: '1574680633',
 };
 
 // In-memory cache for evaluation data (since we can't write to public Google Sheets without auth)
@@ -580,7 +582,7 @@ async function startServer() {
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`);
     console.log('Google Sheets integration enabled');
-    console.log(`Login Sheet: https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.LOGIN_SHEET_ID}`);
+    console.log(`Users Sheet: https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.USERS_SHEET_ID}`);
     console.log(`Evaluation Sheet: https://docs.google.com/spreadsheets/d/${GOOGLE_SHEETS_CONFIG.EVAL_SHEET_ID}`);
 
     if (hasWriteAccess) {

@@ -1,82 +1,80 @@
 # Google Sheets Integration Setup
 
-This application now uses Google Sheets instead of local Excel files for data storage.
+This application uses Google Sheets as the backend database for storing user data and evaluation results.
 
-## Required Google Sheets
+## Configuration
 
-### 1. Login Credentials Sheet
-**URL**: https://docs.google.com/spreadsheets/d/1iKFh699K_TapsbUG539bvUG7rYvNN0eA/edit?gid=1017169916#gid=1017169916
+### Google Sheets URLs
 
-**Required Columns** (Row 1 - Headers):
-- `Username` - Judge username
-- `Password` - Judge password
-- `Name` - Judge full name (optional)
+**Users Sheet:**
+- URL: https://docs.google.com/spreadsheets/d/1jLyGbkHE_fopA1QwYHsvezRZeNBu4ylXTiVQol0QNDQ/edit?gid=617871645
+- Sheet ID: `1jLyGbkHE_fopA1QwYHsvezRZeNBu4ylXTiVQol0QNDQ`
+- GID: `617871645`
+- Columns: USERID, NAME, SUBMITTED, ISADMIN
 
-**Example Data**:
-```
-Username | Password | Name
-judge1   | pass123  | John Smith
-judge2   | pass456  | Jane Doe
-admin    | admin123 | Administrator
-```
+**Evaluation Results Sheet:**
+- URL: https://docs.google.com/spreadsheets/d/1aYLnFkq969TOuQ2b0hY6jS2neCf5CHeV-En78QmARf4/edit?gid=1574680633
+- Sheet ID: `1aYLnFkq969TOuQ2b0hY6jS2neCf5CHeV-En78QmARf4`
+- GID: `1574680633`
+- Columns: Team Name, Judge Name, [12 evaluation criteria columns]
 
-### 2. Evaluation Results Sheet
-**URL**: https://docs.google.com/spreadsheets/d/1e8_bLRJqe6m9vAnc6Jmx6pam1NoJT6nI/edit?gid=1688314091#gid=1688314091
+### Service Account Credentials
 
-**Required Columns** (Row 1 - Headers):
-- `Team Name` - Team being evaluated (Blue, Red, Green)
-- `Judge Name` - Name of the judge
-- `Reflects Creativity and Innovation` - Score 0-10
-- `Demonstrates clear thought` - Score 0-10
-- `Clearly representation of the Concept` - Score 0-10
-- `Visually appealing` - Score 0-10
-- `Distinctive and Memorable` - Score 0-10
-- `Relevance to Theme` - Score 0-10
-- `Audience Appeal` - Score 0-10
-- `Creativity` - Score 0-10
-- `Overall Creativity` - Score 0-10
-- `Integration of Logo and Music` - Score 0-10
-- `How clearly the content is presented` - Score 0-10
-- `How synced the presentation with Logo and Theme Music` - Score 0-10
+The application uses a Google Cloud service account to access and modify the sheets. The credentials are stored in `service-account-key.json` (already configured).
 
-## Sheet Permissions
+**Service Account Details:**
+- Project ID: `adrakcgteventapp`
+- Client Email: `adrakapiforjedgeapplication@adrakcgteventapp.iam.gserviceaccount.com`
+- The service account has been granted edit access to both sheets
 
-**IMPORTANT**: Make sure both Google Sheets are set to:
-- **"Anyone with the link can view"** for reading data
-- For writing data, you would need to set up Google Service Account credentials
+## How It Works
 
-## Current Implementation
+### Read Operations (Frontend)
+The Angular frontend can directly read from Google Sheets using CSV export URLs:
+- No authentication required for public sheets
+- Fast and efficient for displaying data
+- Used for: login validation, leaderboard display, loading existing evaluations
 
-- ✅ **Reading**: The app can read data from public Google Sheets
-- ⚠️ **Writing**: Currently uses in-memory cache (data persists during server session)
-- 🔄 **Cache**: Refreshes every 30 seconds from Google Sheets
+### Write Operations (Backend)
+All write operations go through the Node.js backend server:
+- Uses Google Sheets API v4 with service account authentication
+- Handles: submitting evaluations, updating user submission status
+- Avoids CORS issues and keeps credentials secure
 
-## Production Setup (Optional)
+## Running the Application
 
-For full read/write functionality to Google Sheets:
+1. **Start the backend server:**
+   ```bash
+   npm run server
+   ```
+   Server will run on http://localhost:3000
 
-1. Create a Google Cloud Project
-2. Enable Google Sheets API
-3. Create Service Account credentials
-4. Share your sheets with the service account email
-5. Add credentials to server environment
+2. **Start the Angular app:**
+   ```bash
+   npm start
+   ```
+   App will run on http://localhost:4200
 
-## Testing
+3. **Or run both together:**
+   ```bash
+   npm run dev
+   ```
 
-1. Make sure your Google Sheets have the correct column headers
-2. Add some test data to the Login sheet
-3. Start the server: `npm run dev` (from server directory)
-4. Check console for successful connection messages
+## API Endpoints
 
-## Troubleshooting
+The backend server provides these endpoints:
 
-- **"Login data not available"**: Check if Login sheet is publicly accessible
-- **"Empty leaderboard"**: Check if Evaluation sheet has correct column headers
-- **"Service unavailable"**: Check internet connection and sheet URLs
+- `POST /api/login` - Validate user credentials
+- `GET /api/teams` - Get list of teams
+- `POST /api/evaluations` - Save evaluation for a team
+- `GET /api/evaluation` - Load evaluation for a team/judge
+- `GET /api/judge-scores` - Get judge's scores for all teams
+- `GET /api/leaderboard` - Get leaderboard with averages
+- `POST /api/submit-all-evaluations` - Submit all evaluations and mark user as submitted
 
-## Sheet URLs Used in Code
+## Security Notes
 
-```javascript
-LOGIN_SHEET_ID: '1iKFh699K_TapsbUG539bvUG7rYvNN0eA'
-EVAL_SHEET_ID: '1e8_bLRJqe6m9vAnc6Jmx6pam1NoJT6nI'
-```
+- The `service-account-key.json` file is excluded from git via `.gitignore`
+- Service account has minimal permissions (only access to these two sheets)
+- Frontend never exposes the service account credentials
+- All write operations are authenticated through the backend

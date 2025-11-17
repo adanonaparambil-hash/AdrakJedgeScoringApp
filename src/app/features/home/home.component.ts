@@ -384,6 +384,12 @@ export class HomeComponent implements OnInit {
   submitting = false;
 
   ngOnInit(): void {
+    // If admin, redirect to leaderboard immediately
+    if (this.isAdmin) {
+      this.router.navigate(['/tabs/leaderboard']);
+      return;
+    }
+    
     this.api.getTeams().subscribe(t => this.teams = t);
     if (this.judgeName) {
       this.api.getJudgeScores(this.judgeName).subscribe(s => this.scores = s);
