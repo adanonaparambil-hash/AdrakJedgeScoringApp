@@ -35,5 +35,3 @@ yarn-error.log*
 
 # Misc
 package-lock.json
-
-service-account-key.json
